@@ -230,7 +230,7 @@ write_devstack_version
 
 # Warn users who aren't on an explicitly supported distro, but allow them to
 # override check and attempt installation with ``FORCE=yes ./stack``
-SUPPORTED_DISTROS="bookworm|bullseye|jammy|rhel8|rhel9|openEuler-22.03"
+SUPPORTED_DISTROS="bookworm|jammy|noble|rhel9"
 
 if [[ ! ${DISTRO} =~ $SUPPORTED_DISTROS ]]; then
     echo "WARNING: this script has not been tested on $DISTRO"
@@ -302,23 +302,14 @@ function _install_epel {
 }
 
 function _install_rdo {
-    if [[ $DISTRO == "rhel8" ]]; then
+    if [[ $DISTRO == "rhel9" ]]; then
+        rdo_release=${TARGET_BRANCH#*/}
         if [[ "$TARGET_BRANCH" == "master" ]]; then
-            # rdo-release.el8.rpm points to latest RDO release, use that for master
-            sudo dnf -y install https://rdoproject.org/repos/rdo-release.el8.rpm
+            # adding delorean-deps repo to provide current master rpms
+            sudo wget https://trunk.rdoproject.org/centos9-master/delorean-deps.repo -O /etc/yum.repos.d/delorean-deps.repo
         else
-            # For stable branches use corresponding release rpm
-            rdo_release=$(echo $TARGET_BRANCH | sed "s|stable/||g")
-            sudo dnf -y install https://rdoproject.org/repos/openstack-${rdo_release}/rdo-release-${rdo_release}.el8.rpm
-        fi
-    elif [[ $DISTRO == "rhel9" ]]; then
-        if [[ "$TARGET_BRANCH" == "master" ]]; then
-            # rdo-release.el9.rpm points to latest RDO release, use that for master
-            sudo dnf -y install https://rdoproject.org/repos/rdo-release.el9.rpm
-        else
-            # For stable branches use corresponding release rpm
-            rdo_release=$(echo $TARGET_BRANCH | sed "s|stable/||g")
-            sudo dnf -y install https://rdoproject.org/repos/openstack-${rdo_release}/rdo-release-${rdo_release}.el9.rpm
+            # For stable/unmaintained branches use corresponding release rpm
+            sudo dnf -y install centos-release-openstack-${rdo_release}
         fi
     fi
     sudo dnf -y update

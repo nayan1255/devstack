@@ -88,6 +88,7 @@ export NEUTRON_TEST_CONFIG_FILE=${NEUTRON_TEST_CONFIG_FILE:-"$NEUTRON_CONF_DIR/d
 # enough
 NEUTRON_DEPLOY_MOD_WSGI=$(trueorfalse False NEUTRON_DEPLOY_MOD_WSGI)
 
+NEUTRON_UWSGI=neutron.wsgi.api:application
 NEUTRON_UWSGI_CONF=$NEUTRON_CONF_DIR/neutron-api-uwsgi.ini
 
 # If NEUTRON_ENFORCE_SCOPE == True, it will set "enforce_scope"
@@ -369,6 +370,24 @@ function _determine_config_l3 {
     echo "$opts"
 }
 
+function _enable_ovn_maintenance {
+    if [[ $Q_AGENT == "ovn" ]]; then
+        enable_service neutron-ovn-maintenance-worker
+    fi
+}
+
+function _run_ovn_maintenance {
+    if [[ $Q_AGENT == "ovn" ]]; then
+        run_process neutron-ovn-maintenance-worker "$NEUTRON_BIN_DIR/neutron-ovn-maintenance-worker $cfg_file_options"
+    fi
+}
+
+function _stop_ovn_maintenance {
+    if [[ $Q_AGENT == "ovn" ]]; then
+        stop_process neutron-ovn-maintenance-worker
+    fi
+}
+
 # For services and agents that require it, dynamically construct a list of
 # --config-file arguments that are passed to the binary.
 function determine_config_files {
@@ -448,7 +467,7 @@ function configure_neutron {
     iniset $NEUTRON_CONF DEFAULT rpc_state_report_workers 0
 
     if [ "$NEUTRON_DEPLOY_MOD_WSGI" == "True" ]; then
-        write_uwsgi_config "$NEUTRON_UWSGI_CONF" "$NEUTRON_BIN_DIR/neutron-api" "/networking"
+        write_uwsgi_config "$NEUTRON_UWSGI_CONF" "$NEUTRON_UWSGI" "/networking" "" "neutron-api"
     fi
 }
 
@@ -467,7 +486,7 @@ function create_nova_conf_neutron {
     local conf=${1:-$NOVA_CONF}
     iniset $conf neutron auth_type "password"
     iniset $conf neutron auth_url "$KEYSTONE_SERVICE_URI"
-    iniset $conf neutron username "$Q_ADMIN_USERNAME"
+    iniset $conf neutron username nova
     iniset $conf neutron password "$SERVICE_PASSWORD"
     iniset $conf neutron user_domain_name "$SERVICE_DOMAIN_NAME"
     iniset $conf neutron project_name "$SERVICE_PROJECT_NAME"
@@ -628,13 +647,28 @@ function start_neutron_service_and_check {
         service_port=$Q_PORT_INT
         service_protocol="http"
     fi
+
     # Start the Neutron service
     if [ "$NEUTRON_DEPLOY_MOD_WSGI" == "True" ]; then
+        # The default value of "rpc_workers" is None (not defined). If
+        # "rpc_workers" is explicitly set to 0, the RPC workers process
+        # should not be executed.
+        local rpc_workers
+        rpc_workers=$(iniget_multiline $NEUTRON_CONF DEFAULT rpc_workers)
+
         enable_service neutron-api
         run_process neutron-api "$(which uwsgi) --procname-prefix neutron-api --ini $NEUTRON_UWSGI_CONF"
         neutron_url=$Q_PROTOCOL://$Q_HOST/
-        enable_service neutron-rpc-server
-        run_process neutron-rpc-server "$NEUTRON_BIN_DIR/neutron-rpc-server $cfg_file_options"
+        if [ "$rpc_workers" != "0" ]; then
+            enable_service neutron-rpc-server
+        fi
+        enable_service neutron-periodic-workers
+        _enable_ovn_maintenance
+        if [ "$rpc_workers" != "0" ]; then
+            run_process neutron-rpc-server "$NEUTRON_BIN_DIR/neutron-rpc-server $cfg_file_options"
+        fi
+        run_process neutron-periodic-workers "$NEUTRON_BIN_DIR/neutron-periodic-workers $cfg_file_options"
+        _run_ovn_maintenance
     else
         run_process q-svc "$NEUTRON_BIN_DIR/neutron-server $cfg_file_options"
         neutron_url=$service_protocol://$Q_HOST:$service_port/
@@ -706,7 +740,9 @@ function stop_other {
 
     if [ "$NEUTRON_DEPLOY_MOD_WSGI" == "True" ]; then
         stop_process neutron-rpc-server
+        stop_process neutron-periodic-workers
         stop_process neutron-api
+        _stop_ovn_maintenance
     else
         stop_process q-svc
     fi
@@ -823,6 +859,8 @@ function cleanup_neutron {
     if [ "$NEUTRON_DEPLOY_MOD_WSGI" == "True" ]; then
         stop_process neutron-api
         stop_process neutron-rpc-server
+        stop_process neutron-periodic-workers
+        _stop_ovn_maintenance
         remove_uwsgi_config "$NEUTRON_UWSGI_CONF" "neutron-api"
         sudo rm -f $(apache_site_config_for neutron-api)
     fi
@@ -1022,7 +1060,7 @@ function _configure_neutron_service {
     Q_API_PASTE_FILE=$NEUTRON_CONF_DIR/api-paste.ini
     cp $NEUTRON_DIR/etc/api-paste.ini $Q_API_PASTE_FILE
 
-    if [[ -n "$NEUTRON_ENDPOINT_SERVICE_NAME" ]]; then
+    if [[ "$NEUTRON_DEPLOY_MOD_WSGI" == "False" && -n "$NEUTRON_ENDPOINT_SERVICE_NAME" ]]; then
         _replace_api_paste_composite
     fi
 

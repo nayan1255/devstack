@@ -7,9 +7,6 @@
 #   Set OS_USERNAME to override the default user name 'demo'
 #   Set ADMIN_PASSWORD to set the password for 'admin' and 'demo'
 
-# NOTE: support for the old NOVA_* novaclient environment variables has
-# been removed.
-
 if [[ -n "$1" ]]; then
     OS_USERNAME=$1
 fi
@@ -35,26 +32,11 @@ fi
 # Get some necessary configuration
 source $RC_DIR/lib/tls
 
-# The OpenStack ecosystem has standardized the term **project** as the
-# entity that owns resources.  In some places **tenant** remains
-# referenced, but in all cases this just means **project**.  We will
-# warn if we need to turn on legacy **tenant** support to have a
-# working environment.
+# Minimal configuration
+export OS_AUTH_TYPE=password
 export OS_PROJECT_NAME=${OS_PROJECT_NAME:-demo}
-
-echo "WARNING: setting legacy OS_TENANT_NAME to support cli tools."
-export OS_TENANT_NAME=$OS_PROJECT_NAME
-
-# In addition to the owning entity (project), nova stores the entity performing
-# the action as the **user**.
 export OS_USERNAME=${OS_USERNAME:-demo}
-
-# With Keystone you pass the keystone password instead of an api key.
-# Recent versions of novaclient use OS_PASSWORD instead of NOVA_API_KEYs
-# or NOVA_PASSWORD.
 export OS_PASSWORD=${ADMIN_PASSWORD:-secret}
-
-# Region
 export OS_REGION_NAME=${REGION_NAME:-RegionOne}
 
 # Set the host API endpoint. This will default to HOST_IP if SERVICE_IP_VERSION
@@ -73,30 +55,14 @@ else
     GLANCE_HOST=${GLANCE_HOST:-$HOST_IP}
 fi
 
-# Identity API version
-export OS_IDENTITY_API_VERSION=3
-
-# Ask keystoneauth1 to use keystone
-export OS_AUTH_TYPE=password
-
-# Authenticating against an OpenStack cloud using Keystone returns a **Token**
-# and **Service Catalog**.  The catalog contains the endpoints for all services
-# the user/project has access to - including nova, glance, keystone, swift, ...
-# We currently recommend using the version 3 *identity api*.
-#
-
 # If you don't have a working .stackenv, this is the backup position
 KEYSTONE_BACKUP=$SERVICE_PROTOCOL://$SERVICE_HOST:5000
 KEYSTONE_SERVICE_URI=${KEYSTONE_SERVICE_URI:-$KEYSTONE_BACKUP}
 
 export OS_AUTH_URL=${OS_AUTH_URL:-$KEYSTONE_SERVICE_URI}
 
-# Currently, in order to use openstackclient with Identity API v3,
-# we need to set the domain which the user and project belong to.
-if [ "$OS_IDENTITY_API_VERSION" = "3" ]; then
-    export OS_USER_DOMAIN_ID=${OS_USER_DOMAIN_ID:-"default"}
-    export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-"default"}
-fi
+export OS_USER_DOMAIN_ID=${OS_USER_DOMAIN_ID:-"default"}
+export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-"default"}
 
 # Set OS_CACERT to a default CA certificate chain if it exists.
 if [[ ! -v OS_CACERT ]] ; then
