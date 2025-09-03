@@ -318,8 +318,8 @@ function generate_swift_config_services {
     iniuncomment ${swift_node_config} DEFAULT mount_check
     iniset ${swift_node_config} DEFAULT mount_check false
 
-    iniuncomment ${swift_node_config} ${server_type}-replicator vm_test_mode
-    iniset ${swift_node_config} ${server_type}-replicator vm_test_mode yes
+    iniuncomment ${swift_node_config} ${server_type}-replicator rsync_module
+    iniset ${swift_node_config} ${server_type}-replicator rsync_module "{replication_ip}::${server_type}{replication_port}"
 
     # Using a sed and not iniset/iniuncomment because we want to a global
     # modification and make sure it works for new sections.
@@ -844,14 +844,14 @@ function stop_swift {
 
 function swift_configure_tempurls {
     # note we are using swift credentials!
-    openstack --os-cloud "" \
-        --os-region-name $REGION_NAME \
-        --os-auth-url $KEYSTONE_SERVICE_URI \
-        --os-username=swift \
-        --os-password=$SERVICE_PASSWORD \
-        --os-user-domain-name=$SERVICE_DOMAIN_NAME \
-        --os-project-name=$SERVICE_PROJECT_NAME \
-        --os-project-domain-name=$SERVICE_DOMAIN_NAME \
+    openstack --os-cloud="" \
+        --os-region-name="$REGION_NAME" \
+        --os-auth-url="$KEYSTONE_SERVICE_URI" \
+        --os-username="swift" \
+        --os-password="$SERVICE_PASSWORD" \
+        --os-user-domain-name="$SERVICE_DOMAIN_NAME" \
+        --os-project-name="$SERVICE_PROJECT_NAME" \
+        --os-project-domain-name="$SERVICE_DOMAIN_NAME" \
         object store account \
         set --property "Temp-URL-Key=$SWIFT_TEMPURL_KEY"
 }

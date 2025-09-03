@@ -24,6 +24,7 @@ official OpenStack projects.
 ======================================== ===
 Plugin Name                              URL
 ======================================== ===
+openstack/aetos                          `https://opendev.org/openstack/aetos <https://opendev.org/openstack/aetos>`__
 openstack/aodh                           `https://opendev.org/openstack/aodh <https://opendev.org/openstack/aodh>`__
 openstack/barbican                       `https://opendev.org/openstack/barbican <https://opendev.org/openstack/barbican>`__
 openstack/blazar                         `https://opendev.org/openstack/blazar <https://opendev.org/openstack/blazar>`__
@@ -31,16 +32,19 @@ openstack/ceilometer                     `https://opendev.org/openstack/ceilomet
 openstack/cloudkitty                     `https://opendev.org/openstack/cloudkitty <https://opendev.org/openstack/cloudkitty>`__
 openstack/cyborg                         `https://opendev.org/openstack/cyborg <https://opendev.org/openstack/cyborg>`__
 openstack/designate                      `https://opendev.org/openstack/designate <https://opendev.org/openstack/designate>`__
+openstack/designate-tempest-plugin       `https://opendev.org/openstack/designate-tempest-plugin <https://opendev.org/openstack/designate-tempest-plugin>`__
 openstack/devstack-plugin-amqp1          `https://opendev.org/openstack/devstack-plugin-amqp1 <https://opendev.org/openstack/devstack-plugin-amqp1>`__
 openstack/devstack-plugin-ceph           `https://opendev.org/openstack/devstack-plugin-ceph <https://opendev.org/openstack/devstack-plugin-ceph>`__
 openstack/devstack-plugin-container      `https://opendev.org/openstack/devstack-plugin-container <https://opendev.org/openstack/devstack-plugin-container>`__
 openstack/devstack-plugin-kafka          `https://opendev.org/openstack/devstack-plugin-kafka <https://opendev.org/openstack/devstack-plugin-kafka>`__
 openstack/devstack-plugin-nfs            `https://opendev.org/openstack/devstack-plugin-nfs <https://opendev.org/openstack/devstack-plugin-nfs>`__
 openstack/devstack-plugin-open-cas       `https://opendev.org/openstack/devstack-plugin-open-cas <https://opendev.org/openstack/devstack-plugin-open-cas>`__
+openstack/devstack-plugin-prometheus     `https://opendev.org/openstack/devstack-plugin-prometheus <https://opendev.org/openstack/devstack-plugin-prometheus>`__
 openstack/freezer                        `https://opendev.org/openstack/freezer <https://opendev.org/openstack/freezer>`__
 openstack/freezer-api                    `https://opendev.org/openstack/freezer-api <https://opendev.org/openstack/freezer-api>`__
 openstack/freezer-tempest-plugin         `https://opendev.org/openstack/freezer-tempest-plugin <https://opendev.org/openstack/freezer-tempest-plugin>`__
 openstack/freezer-web-ui                 `https://opendev.org/openstack/freezer-web-ui <https://opendev.org/openstack/freezer-web-ui>`__
+openstack/grian-ui                       `https://opendev.org/openstack/grian-ui <https://opendev.org/openstack/grian-ui>`__
 openstack/heat                           `https://opendev.org/openstack/heat <https://opendev.org/openstack/heat>`__
 openstack/heat-dashboard                 `https://opendev.org/openstack/heat-dashboard <https://opendev.org/openstack/heat-dashboard>`__
 openstack/ironic                         `https://opendev.org/openstack/ironic <https://opendev.org/openstack/ironic>`__
@@ -48,9 +52,7 @@ openstack/ironic-inspector               `https://opendev.org/openstack/ironic-i
 openstack/ironic-prometheus-exporter     `https://opendev.org/openstack/ironic-prometheus-exporter <https://opendev.org/openstack/ironic-prometheus-exporter>`__
 openstack/ironic-ui                      `https://opendev.org/openstack/ironic-ui <https://opendev.org/openstack/ironic-ui>`__
 openstack/keystone                       `https://opendev.org/openstack/keystone <https://opendev.org/openstack/keystone>`__
-openstack/kuryr-kubernetes               `https://opendev.org/openstack/kuryr-kubernetes <https://opendev.org/openstack/kuryr-kubernetes>`__
 openstack/kuryr-libnetwork               `https://opendev.org/openstack/kuryr-libnetwork <https://opendev.org/openstack/kuryr-libnetwork>`__
-openstack/kuryr-tempest-plugin           `https://opendev.org/openstack/kuryr-tempest-plugin <https://opendev.org/openstack/kuryr-tempest-plugin>`__
 openstack/magnum                         `https://opendev.org/openstack/magnum <https://opendev.org/openstack/magnum>`__
 openstack/magnum-ui                      `https://opendev.org/openstack/magnum-ui <https://opendev.org/openstack/magnum-ui>`__
 openstack/manila                         `https://opendev.org/openstack/manila <https://opendev.org/openstack/manila>`__
@@ -112,7 +114,6 @@ starlingx/nfv                            `https://opendev.org/starlingx/nfv <htt
 starlingx/update                         `https://opendev.org/starlingx/update <https://opendev.org/starlingx/update>`__
 vexxhost/openstack-operator              `https://opendev.org/vexxhost/openstack-operator <https://opendev.org/vexxhost/openstack-operator>`__
 x/almanach                               `https://opendev.org/x/almanach <https://opendev.org/x/almanach>`__
-x/apmec                                  `https://opendev.org/x/apmec <https://opendev.org/x/apmec>`__
 x/bilean                                 `https://opendev.org/x/bilean <https://opendev.org/x/bilean>`__
 x/broadview-collector                    `https://opendev.org/x/broadview-collector <https://opendev.org/x/broadview-collector>`__
 x/collectd-openstack-plugins             `https://opendev.org/x/collectd-openstack-plugins <https://opendev.org/x/collectd-openstack-plugins>`__
@@ -170,7 +171,6 @@ x/rsd-virt-for-nova                      `https://opendev.org/x/rsd-virt-for-nov
 x/scalpels                               `https://opendev.org/x/scalpels <https://opendev.org/x/scalpels>`__
 x/slogging                               `https://opendev.org/x/slogging <https://opendev.org/x/slogging>`__
 x/stackube                               `https://opendev.org/x/stackube <https://opendev.org/x/stackube>`__
-x/tap-as-a-service-dashboard             `https://opendev.org/x/tap-as-a-service-dashboard <https://opendev.org/x/tap-as-a-service-dashboard>`__
 x/tatu                                   `https://opendev.org/x/tatu <https://opendev.org/x/tatu>`__
 x/trio2o                                 `https://opendev.org/x/trio2o <https://opendev.org/x/trio2o>`__
 x/valet                                  `https://opendev.org/x/valet <https://opendev.org/x/valet>`__

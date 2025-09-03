@@ -40,7 +40,7 @@ Start with a clean and minimal install of a Linux system. DevStack
 attempts to support the two latest LTS releases of Ubuntu,
 Rocky Linux 9 and openEuler.
 
-If you do not have a preference, Ubuntu 22.04 (Jammy) is the
+If you do not have a preference, Ubuntu 24.04 (Noble) is the
 most tested, and will probably go the smoothest.
 
 Add Stack User (optional)
@@ -132,6 +132,8 @@ there.
 
 You can ``source openrc`` in your shell, and then use the
 ``openstack`` command line tool to manage your devstack.
+
+You can :ref:`create a VM and SSH into it <ssh>`.
 
 You can ``cd /opt/stack/tempest`` and run tempest tests that have
 been configured to work with your devstack.

@@ -230,7 +230,7 @@ write_devstack_version
 
 # Warn users who aren't on an explicitly supported distro, but allow them to
 # override check and attempt installation with ``FORCE=yes ./stack``
-SUPPORTED_DISTROS="bookworm|jammy|noble|rhel9"
+SUPPORTED_DISTROS="bookworm|jammy|noble|rhel9|rhel10"
 
 if [[ ! ${DISTRO} =~ $SUPPORTED_DISTROS ]]; then
     echo "WARNING: this script has not been tested on $DISTRO"
@@ -302,14 +302,18 @@ function _install_epel {
 }
 
 function _install_rdo {
-    if [[ $DISTRO == "rhel9" ]]; then
+    if [[ $DISTRO =~ "rhel" ]]; then
+        VERSION=${DISTRO:4:2}
         rdo_release=${TARGET_BRANCH#*/}
         if [[ "$TARGET_BRANCH" == "master" ]]; then
             # adding delorean-deps repo to provide current master rpms
-            sudo wget https://trunk.rdoproject.org/centos9-master/delorean-deps.repo -O /etc/yum.repos.d/delorean-deps.repo
+            sudo wget https://trunk.rdoproject.org/centos${VERSION}-master/delorean-deps.repo -O /etc/yum.repos.d/delorean-deps.repo
         else
-            # For stable/unmaintained branches use corresponding release rpm
-            sudo dnf -y install centos-release-openstack-${rdo_release}
+            if sudo dnf provides centos-release-openstack-${rdo_release} >/dev/null 2>&1; then
+                sudo dnf -y install centos-release-openstack-${rdo_release}
+            else
+                sudo wget https://trunk.rdoproject.org/centos${VERSION}-${rdo_release}/delorean-deps.repo -O /etc/yum.repos.d/delorean-deps.repo
+            fi
         fi
     fi
     sudo dnf -y update
@@ -353,7 +357,7 @@ async_init
 # Certain services such as rabbitmq require that the local hostname resolves
 # correctly.  Make sure it exists in /etc/hosts so that is always true.
 LOCAL_HOSTNAME=`hostname -s`
-if ! fgrep -qwe "$LOCAL_HOSTNAME" /etc/hosts; then
+if ! grep -Fqwe "$LOCAL_HOSTNAME" /etc/hosts; then
     sudo sed -i "s/\(^127.0.0.1.*\)/\1 $LOCAL_HOSTNAME/" /etc/hosts
 fi
 
@@ -405,6 +409,11 @@ elif [[ $DISTRO == "rhel9" ]]; then
     if is_package_installed curl-minimal; then
         sudo dnf swap -y curl-minimal curl
     fi
+elif [[ $DISTRO == "rhel10" ]]; then
+    # for CentOS Stream 10 repository
+    sudo dnf config-manager --set-enabled crb
+    # rabbitmq and other packages are provided by RDO repositories.
+    _install_rdo
 elif [[ $DISTRO == "openEuler-22.03" ]]; then
     # There are some problem in openEuler. We should fix it first. Some required
     # package/action runs before fixup script. So we can't fix there.
@@ -638,6 +647,7 @@ source $TOP_DIR/lib/swift
 source $TOP_DIR/lib/neutron
 source $TOP_DIR/lib/ldap
 source $TOP_DIR/lib/dstat
+source $TOP_DIR/lib/atop
 source $TOP_DIR/lib/tcpdump
 source $TOP_DIR/lib/etcd3
 source $TOP_DIR/lib/os-vif
@@ -1090,6 +1100,12 @@ save_stackenv $LINENO
 # A better kind of sysstat, with the top process per time slice
 start_dstat
 
+if is_service_enabled atop; then
+    configure_atop
+    install_atop
+    start_atop
+fi
+
 # Run a background tcpdump for debugging
 # Note: must set TCPDUMP_ARGS with the enabled service
 if is_service_enabled tcpdump; then
@@ -1304,10 +1320,7 @@ if is_service_enabled ovn-controller ovn-controller-vtep; then
     start_ovn_services
 fi
 
-if is_service_enabled neutron-api; then
-    echo_summary "Starting Neutron"
-    start_neutron_api
-elif is_service_enabled q-svc; then
+if is_service_enabled q-svc neutron-api; then
     echo_summary "Starting Neutron"
     configure_neutron_after_post_config
     start_neutron_service_and_check
@@ -1324,7 +1337,7 @@ if is_service_enabled neutron; then
     start_neutron
 fi
 # Once neutron agents are started setup initial network elements
-if is_service_enabled q-svc && [[ "$NEUTRON_CREATE_INITIAL_NETWORKS" == "True" ]]; then
+if is_service_enabled q-svc neutron-api && [[ "$NEUTRON_CREATE_INITIAL_NETWORKS" == "True" ]]; then
     echo_summary "Creating initial neutron network elements"
     # Here's where plugins can wire up their own networks instead
     # of the code in lib/neutron_plugins/services/l3

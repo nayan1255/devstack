@@ -40,11 +40,8 @@ function setup_devstack_virtualenv {
         # Using system site packages to enable nova to use libguestfs.
         # This package is currently installed via the distro and not
         # available on pypi.
-        python$PYTHON3_VERSION -m venv --system-site-packages $DEVSTACK_VENV
-        pip_install -U pip setuptools
-        #NOTE(rpittau): workaround for simplejson removal in osc
-        #  https://review.opendev.org/c/openstack/python-openstackclient/+/920001
-        pip_install -U simplejson
+        $PYTHON -m venv --system-site-packages "${DEVSTACK_VENV}"
+        pip_install -U pip setuptools[core]
     fi
     if [[ ":$PATH:" != *":$DEVSTACK_VENV/bin:"* ]] ; then
         export PATH="$DEVSTACK_VENV/bin:$PATH"
@@ -199,13 +196,7 @@ function pip_install {
         echo "Using python $PYTHON3_VERSION to install $package_dir"
     else
         local cmd_pip="python$PYTHON3_VERSION -m pip"
-        # See
-        #  https://github.com/pypa/setuptools/issues/2232
-        #  http://lists.openstack.org/pipermail/openstack-discuss/2020-August/016905.html
-        # this makes setuptools >=50 use the platform distutils.
-        # We only want to do this on global pip installs, not if
-        # installing in a virtualenv
-        local sudo_pip="sudo -H LC_ALL=en_US.UTF-8 SETUPTOOLS_USE_DISTUTILS=stdlib "
+        local sudo_pip="sudo -H LC_ALL=en_US.UTF-8"
         echo "Using python $PYTHON3_VERSION to install $package_dir"
     fi
 
@@ -498,11 +489,7 @@ function install_python3 {
     if is_ubuntu; then
         apt_get install python${PYTHON3_VERSION} python${PYTHON3_VERSION}-dev
     elif is_fedora; then
-        if [ "$os_VENDOR" = "Fedora" ]; then
-            install_package python${PYTHON3_VERSION//.}
-        else
-            install_package python${PYTHON3_VERSION//.} python${PYTHON3_VERSION//.}-devel
-        fi
+        install_package python${PYTHON3_VERSION}-devel python${PYTHON3_VERSION}-pip
     fi
 }
 

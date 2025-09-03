@@ -323,7 +323,7 @@ a file, keep service logs and disable color in the stored files.
 
    [[local|localrc]]
    DEST=/opt/stack/
-   LOGFILE=$LOGDIR/stack.sh.log
+   LOGFILE=$DEST/stack.sh.log
    LOG_COLOR=False
 
 Database Backend
@@ -351,30 +351,21 @@ Example disabling RabbitMQ in ``local.conf``::
 
   disable_service rabbit
 
-
 Apache Frontend
 ---------------
 
-The Apache web server can be enabled for wsgi services that support
-being deployed under HTTPD + mod_wsgi. By default, services that
-recommend running under HTTPD + mod_wsgi are deployed under Apache. To
-use an alternative deployment strategy (e.g. eventlet) for services
-that support an alternative to HTTPD + mod_wsgi set
-``ENABLE_HTTPD_MOD_WSGI_SERVICES`` to ``False`` in your
-``local.conf``.
+The Apache web server is enabled for services that support via WSGI. Today this
+means HTTPD and uWSGI but historically this meant HTTPD + mod_wsgi. This
+historical legacy is captured by the naming of many variables, which include
+``MOD_WSGI`` rather than ``UWSGI``.
 
-Each service that can be run under HTTPD + mod_wsgi also has an
-override toggle available that can be set in your ``local.conf``.
-
-Keystone is run under Apache with ``mod_wsgi`` by default.
-
-Example (Keystone)::
-
-    KEYSTONE_USE_MOD_WSGI="True"
-
-Example (Nova)::
-
-    NOVA_USE_MOD_WSGI="True"
+Some services support alternative deployment strategies (e.g. eventlet). You
+can enable these ``ENABLE_HTTPD_MOD_WSGI_SERVICES`` to ``False`` in your
+``local.conf``.  In addition, each service that can be run under HTTPD +
+mod_wsgi also has an override toggle available that can be set in your
+``local.conf``. These are, however, slowly being removed as services have
+adopted standardized deployment mechanisms and more generally moved away from
+eventlet.
 
 Example (Swift)::
 
@@ -383,11 +374,6 @@ Example (Swift)::
 Example (Heat)::
 
     HEAT_USE_MOD_WSGI="True"
-
-Example (Cinder)::
-
-    CINDER_USE_MOD_WSGI="True"
-
 
 Libraries from Git
 ------------------

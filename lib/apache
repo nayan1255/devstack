@@ -53,13 +53,16 @@ APACHE_LOG_DIR="/var/log/${APACHE_NAME}"
 # Enable apache mod and restart apache if it isn't already enabled.
 function enable_apache_mod {
     local mod=$1
+    local should_restart=$2
     # Apache installation, because we mark it NOPRIME
     if is_ubuntu; then
         # Skip mod_version as it is not a valid mod to enable
         # on debuntu, instead it is built in.
         if [[ "$mod" != "version" ]] && ! a2query -m $mod ; then
             sudo a2enmod $mod
-            restart_apache_server
+            if [[ "$should_restart" != "norestart" ]] ; then
+                restart_apache_server
+            fi
         fi
     elif is_fedora; then
         # pass
@@ -86,7 +89,7 @@ function install_apache_uwsgi {
     # didn't fix Python 3.10 compatibility before release.  Should be
     # fixed in uwsgi 4.9.0; can remove this when packages available
     # or we drop this release
-    elif is_fedora && ! is_openeuler && ! [[ $DISTRO =~ f36 ]]; then
+    elif is_fedora && ! is_openeuler && ! [[ $DISTRO =~ f36|rhel9 ]]; then
         # Note httpd comes with mod_proxy_uwsgi and it is loaded by
         # default; the mod_proxy_uwsgi package actually conflicts now.
         # See:
@@ -113,15 +116,13 @@ function install_apache_uwsgi {
     fi
 
     if is_ubuntu; then
-        # we've got to enable proxy and proxy_uwsgi for this to work
-        sudo a2enmod proxy
-        sudo a2enmod proxy_uwsgi
-    elif is_fedora; then
-        # redhat is missing a nice way to turn on/off modules
-        echo "LoadModule proxy_uwsgi_module modules/mod_proxy_uwsgi.so" \
-            | sudo tee /etc/httpd/conf.modules.d/02-proxy-uwsgi.conf
+        if ! a2query -m proxy || ! a2query -m proxy_uwsgi ; then
+            # we've got to enable proxy and proxy_uwsgi for this to work
+            sudo a2enmod proxy
+            sudo a2enmod proxy_uwsgi
+            restart_apache_server
+        fi
     fi
-    restart_apache_server
 }
 
 # install_apache_wsgi() - Install Apache server and wsgi module
@@ -136,7 +137,7 @@ function install_apache_wsgi {
         install_package libapache2-mod-wsgi-py3
     elif is_fedora; then
         sudo rm -f /etc/httpd/conf.d/000-*
-        install_package httpd python3-mod_wsgi
+        install_package httpd python${PYTHON3_VERSION}-mod_wsgi
         # rpm distros dont enable httpd by default so enable it to support reboots.
         sudo systemctl enable httpd
         # For consistency with Ubuntu, switch to the worker mpm, as
@@ -293,6 +294,8 @@ function write_uwsgi_config {
     iniset "$conf" uwsgi add-header "Connection: close"
     # This ensures that file descriptors aren't shared between processes.
     iniset "$conf" uwsgi lazy-apps true
+    # Starting time of the WSGi server
+    iniset "$conf" uwsgi start-time %t
 
     # If we said bind directly to http, then do that and don't start the apache proxy
     if [[ -n "$http" ]]; then
@@ -311,9 +314,7 @@ function write_uwsgi_config {
 # For services using chunked encoding, the only services known to use this
 # currently are Glance and Swift, we need to use an http proxy instead of
 # mod_proxy_uwsgi because the chunked encoding gets dropped. See:
-# https://github.com/unbit/uwsgi/issues/1540 You can workaround this on python2
-# but that involves having apache buffer the request before sending it to
-# uwsgi.
+# https://github.com/unbit/uwsgi/issues/1540.
 function write_local_uwsgi_http_config {
     local conf=$1
     local wsgi=$2
@@ -367,6 +368,8 @@ function write_local_uwsgi_http_config {
     iniset "$conf" uwsgi http-keepalive false
     # Increase socket timeout for slow chunked uploads
     iniset "$conf" uwsgi socket-timeout 30
+    # Starting time of the WSGi server
+    iniset "$conf" uwsgi start-time %t
 
     enable_apache_mod proxy
     enable_apache_mod proxy_http
