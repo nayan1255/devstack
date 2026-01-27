@@ -1,7 +1,6 @@
 conntrack-tools
 curl
 ebtables
-genisoimage # not:rhel9,rhel10 required for config_drive
 iptables
 iputils
 kernel-modules # not:openEuler-22.03
@@ -11,4 +10,4 @@ polkit
 rabbitmq-server # NOPRIME
 sqlite
 sudo
-xorriso # not:rhel8
+xorriso

@@ -453,6 +453,10 @@ function create_nova_conf {
     iniset $NOVA_CONF DEFAULT metadata_listen "$NOVA_SERVICE_LISTEN_ADDRESS"
     iniset $NOVA_CONF DEFAULT shutdown_timeout $NOVA_SHUTDOWN_TIMEOUT
 
+    # Enable errors if response validation fails. We want this enabled in CI
+    # and development contexts to highlights bugs in our response schemas.
+    iniset $NOVA_CONF api response_validation error
+
     iniset $NOVA_CONF key_manager backend nova.keymgr.conf_key_mgr.ConfKeyManager
 
     iniset $NOVA_CONF DEFAULT report_interval $NOVA_SERVICE_REPORT_INTERVAL
@@ -1085,6 +1089,15 @@ function start_nova_compute {
             # gets its own configuration and own log file.
             local fake_conf="${NOVA_FAKE_CONF}-${i}"
             iniset $fake_conf DEFAULT host "${HOSTNAME}${i}"
+            # Ensure that each fake compute has its own state path so that it
+            # can have its own compute_id file
+            local state_path
+            state_path="$NOVA_STATE_PATH/${HOSTNAME}${i}"
+            COMPUTE_ID=$(uuidgen)
+            sudo mkdir -p "$state_path"
+            iniset $fake_conf DEFAULT state_path "$state_path"
+            # use the generated UUID as the stable compute node UUID
+            echo "$COMPUTE_ID" | sudo tee "$state_path/compute_id"
             run_process "n-cpu-${i}" "$NOVA_BIN_DIR/nova-compute --config-file $NOVA_CPU_CONF --config-file $fake_conf"
         done
     else
