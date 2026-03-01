@@ -39,10 +39,10 @@
           - controller
 
 - nodeset:
-    name: devstack-single-node-centos-10-stream
+    name: devstack-single-node-almalinux-10
     nodes:
       - name: controller
-        label: centos-10-stream-8GB
+        label: almalinux-10-8GB
     groups:
       - name: tempest
         nodes:
@@ -58,10 +58,25 @@
         nodes:
           - controller
 
-# TODO(frickler): drop this dummy nodeset once all references have been removed
 - nodeset:
-    name: devstack-single-node-opensuse-15
-    nodes: []
+    name: devstack-single-node-centos-10-stream
+    nodes:
+      - name: controller
+        label: centos-10-stream-8GB
+    groups:
+      - name: tempest
+        nodes:
+          - controller
+
+- nodeset:
+    name: devstack-single-node-debian-trixie
+    nodes:
+      - name: controller
+        label: debian-trixie-8GB
+    groups:
+      - name: tempest
+        nodes:
+          - controller
 
 - nodeset:
     name: devstack-single-node-debian-bookworm
@@ -72,6 +87,11 @@
       - name: tempest
         nodes:
           - controller
+
+# TODO(frickler): drop this dummy nodeset once all references have been removed
+- nodeset:
+    name: devstack-single-node-opensuse-15
+    nodes: []
 
 - nodeset:
     name: devstack-single-node-rockylinux-9
@@ -373,6 +393,36 @@
         nodes:
           - compute1
 
+- nodeset:
+    name: devstack-two-node-debian-trixie
+    nodes:
+      - name: controller
+        label: debian-trixie-8GB
+      - name: compute1
+        label: debian-trixie-8GB
+    groups:
+      # Node where tests are executed and test results collected
+      - name: tempest
+        nodes:
+          - controller
+      # Nodes running the compute service
+      - name: compute
+        nodes:
+          - controller
+          - compute1
+      # Nodes that are not the controller
+      - name: subnode
+        nodes:
+          - compute1
+      # Switch node for multinode networking setup
+      - name: switch
+        nodes:
+          - controller
+      # Peer nodes for multinode networking setup
+      - name: peers
+        nodes:
+          - compute1
+
 - job:
     name: devstack-base
     parent: openstack-multinode-fips
@@ -446,6 +496,7 @@
         /etc/sudoers.d: logs
         '{{ stage_dir }}/iptables.txt': logs
         '{{ stage_dir }}/df.txt': logs
+        '{{ stage_dir }}/mount.txt': logs
         '{{ stage_dir }}/pip2-freeze.txt': logs
         '{{ stage_dir }}/pip3-freeze.txt': logs
         '{{ stage_dir }}/dpkg-l.txt': logs
@@ -767,6 +818,21 @@
 # and these platforms don't have the round-the-clock support to avoid
 # becoming blockers in that situation.
 - job:
+    name: devstack-platform-almalinux-purple-lion-ovn-source
+    parent: tempest-full-py3
+    description: AlmaLinux 10 platform test
+    nodeset: devstack-single-node-almalinux-10
+    timeout: 9000
+    voting: false
+    vars:
+      configure_swap_size: 4096
+      devstack_localrc:
+        OVN_BUILD_FROM_SOURCE: True
+        OVN_BRANCH: "branch-24.03"
+        OVS_BRANCH: "branch-3.3"
+        OVS_SYSCONFDIR: "/usr/local/etc/openvswitch"
+
+- job:
     name: devstack-platform-centos-10-stream
     parent: tempest-full-py3
     description: CentOS 10 Stream platform test
@@ -785,6 +851,15 @@
         PYTHON3_VERSION: 3.11
     timeout: 9000
     voting: false
+
+- job:
+    name: devstack-platform-debian-trixie
+    parent: tempest-full-py3
+    description: Debian Trixie platform test
+    nodeset: devstack-single-node-debian-trixie
+    timeout: 9000
+    vars:
+      configure_swap_size: 4096
 
 - job:
     name: devstack-platform-debian-bookworm
@@ -821,15 +896,6 @@
     voting: false
     vars:
       configure_swap_size: 4096
-
-- job:
-    name: devstack-platform-ubuntu-jammy
-    parent: tempest-full-py3
-    description: Ubuntu 22.04 LTS (Jammy) platform test
-    nodeset: openstack-single-node-jammy
-    timeout: 9000
-    vars:
-      configure_swap_size: 8192
 
 - job:
     name: devstack-platform-ubuntu-noble-ovn-source
@@ -966,18 +1032,19 @@
         - devstack
         - devstack-ipv6
         - devstack-enforce-scope
+        - devstack-platform-almalinux-purple-lion-ovn-source
         - devstack-platform-centos-10-stream
         - devstack-platform-centos-9-stream
         - devstack-platform-debian-bookworm
+        - devstack-platform-debian-trixie
         - devstack-platform-rocky-blue-onyx
         - devstack-platform-rocky-red-quartz
         - devstack-platform-ubuntu-noble-ovn-source
         - devstack-platform-ubuntu-noble-ovs
-        - devstack-platform-ubuntu-jammy
         - devstack-multinode
         - devstack-unit-tests
         - openstack-tox-bashate
-        - ironic-tempest-bios-ipmi-direct-tinyipa
+        - ironic-tempest-bios-ipmi-direct
         - swift-dsvm-functional
         - grenade:
             irrelevant-files: *common-irrelevant-files
@@ -1000,6 +1067,7 @@
         - devstack
         - devstack-ipv6
         - devstack-platform-debian-bookworm
+        - devstack-platform-debian-trixie
         - devstack-platform-ubuntu-noble
         # NOTE(danms): Disabled due to instability, see comment in the job
         # definition above.
@@ -1010,7 +1078,7 @@
         - openstack-tox-bashate
         - neutron-ovs-grenade-multinode:
             irrelevant-files: *common-irrelevant-files
-        - ironic-tempest-bios-ipmi-direct-tinyipa
+        - ironic-tempest-bios-ipmi-direct
         - swift-dsvm-functional
         - grenade:
             irrelevant-files: *common-irrelevant-files
@@ -1051,10 +1119,11 @@
         - devstack-no-tls-proxy
     periodic-weekly:
       jobs:
+        - devstack-platform-almalinux-purple-lion-ovn-source
         - devstack-platform-centos-10-stream
         - devstack-platform-centos-9-stream
         - devstack-platform-debian-bookworm
         - devstack-platform-rocky-blue-onyx
+        - devstack-platform-rocky-red-quartz
         - devstack-platform-ubuntu-noble-ovn-source
         - devstack-platform-ubuntu-noble-ovs
-        - devstack-platform-ubuntu-jammy
