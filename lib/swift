@@ -434,6 +434,13 @@ function configure_swift {
             swift_pipeline+=" s3token"
             iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token auth_uri ${KEYSTONE_SERVICE_URI_V3}
             iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token delay_auth_decision true
+            iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token secret_cache_duration 900
+            iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token auth_url ${KEYSTONE_SERVICE_URI}
+            iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token project_name 'service'
+            iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token project_domain_name ${SERVICE_DOMAIN_NAME}
+            iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token username 'swift'
+            iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token user_domain_name ${SERVICE_DOMAIN_NAME}
+            iniset ${SWIFT_CONFIG_PROXY_SERVER} filter:s3token password ${SERVICE_PASSWORD}
         fi
         swift_pipeline+=" keystoneauth"
     fi
@@ -476,6 +483,9 @@ function configure_swift {
     iniset ${SWIFT_CONF_DIR}/swift.conf swift-hash swift_hash_path_suffix ${SWIFT_HASH}
     iniset ${SWIFT_CONF_DIR}/swift.conf swift-constraints max_header_size ${SWIFT_MAX_HEADER_SIZE}
     iniset ${SWIFT_CONF_DIR}/swift.conf swift-constraints max_file_size ${SWIFT_MAX_FILE_SIZE}
+
+    # Create an additional storage policy
+    iniset ${SWIFT_CONF_DIR}/swift.conf storage-policy:1 name silver
 
     local node_number
     for node_number in ${SWIFT_REPLICAS_SEQ}; do
@@ -713,6 +723,10 @@ function init_swift {
         $SWIFT_BIN_DIR/swift-ring-builder object.builder rebalance 42
         $SWIFT_BIN_DIR/swift-ring-builder container.builder rebalance 42
         $SWIFT_BIN_DIR/swift-ring-builder account.builder rebalance 42
+
+        # An additional storage policy requires an object ring as well.
+        # Re-using the previously created one to use the same devices.
+        cp object.ring.gz object-1.ring.gz
     } && popd >/dev/null
 }
 

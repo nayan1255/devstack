@@ -454,14 +454,7 @@ function configure_neutron_nova {
 
 function create_nova_conf_neutron {
     local conf=${1:-$NOVA_CONF}
-    iniset $conf neutron auth_type "password"
-    iniset $conf neutron auth_url "$KEYSTONE_SERVICE_URI"
-    iniset $conf neutron username nova
-    iniset $conf neutron password "$SERVICE_PASSWORD"
-    iniset $conf neutron user_domain_name "$SERVICE_DOMAIN_NAME"
-    iniset $conf neutron project_name "$SERVICE_PROJECT_NAME"
-    iniset $conf neutron project_domain_name "$SERVICE_DOMAIN_NAME"
-    iniset $conf neutron auth_strategy "$Q_AUTH_STRATEGY"
+    configure_keystoneauth $conf nova neutron
     iniset $conf neutron region_name "$REGION_NAME"
 
     # optionally set options in nova_conf
@@ -1014,13 +1007,7 @@ function _configure_neutron_plugin_agent {
 # It is called when q-svc is enabled.
 function _configure_neutron_service {
     Q_API_PASTE_FILE=$NEUTRON_CONF_DIR/api-paste.ini
-    if test -r $NEUTRON_DIR/etc/neutron/api-paste.ini; then
-        cp $NEUTRON_DIR/etc/neutron/api-paste.ini $Q_API_PASTE_FILE
-    else
-        # TODO(stephenfin): Remove this branch once [1] merges
-        # [1] https://review.opendev.org/c/openstack/neutron/+/961130
-        cp $NEUTRON_DIR/etc/api-paste.ini $Q_API_PASTE_FILE
-    fi
+    cp $NEUTRON_DIR/etc/neutron/api-paste.ini $Q_API_PASTE_FILE
 
     # Update either configuration file with plugin
     iniset $NEUTRON_CONF DEFAULT core_plugin $Q_PLUGIN_CLASS
@@ -1035,10 +1022,10 @@ function _configure_neutron_service {
     iniset $NEUTRON_CONF DEFAULT notify_nova_on_port_status_changes $Q_NOTIFY_NOVA_PORT_STATUS_CHANGES
     iniset $NEUTRON_CONF DEFAULT notify_nova_on_port_data_changes $Q_NOTIFY_NOVA_PORT_DATA_CHANGES
 
-    configure_keystone_authtoken_middleware $NEUTRON_CONF nova nova
+    configure_keystoneauth $NEUTRON_CONF nova nova
 
     # Configuration for placement client
-    configure_keystone_authtoken_middleware $NEUTRON_CONF placement placement
+    configure_keystoneauth $NEUTRON_CONF placement placement
 
     # Configure plugin
     neutron_plugin_configure_service
@@ -1097,13 +1084,7 @@ function _neutron_setup_rootwrap {
 
     # Set up ``rootwrap.conf``, pointing to ``$NEUTRON_CONF_DIR/rootwrap.d``
     # location moved in newer versions, prefer new location
-    if test -r $NEUTRON_DIR/etc/neutron/rootwrap.conf; then
-        sudo install -o root -g root -m 644 $NEUTRON_DIR/etc/neutron/rootwrap.conf $Q_RR_CONF_FILE
-    else
-        # TODO(stephenfin): Remove this branch once [1] merges
-        # [1] https://review.opendev.org/c/openstack/neutron/+/961130
-        sudo install -o root -g root -m 644 $NEUTRON_DIR/etc/rootwrap.conf $Q_RR_CONF_FILE
-    fi
+    sudo install -o root -g root -m 644 $NEUTRON_DIR/etc/neutron/rootwrap.conf $Q_RR_CONF_FILE
     sudo sed -e "s:^filters_path=.*$:filters_path=$Q_CONF_ROOTWRAP_D:" -i $Q_RR_CONF_FILE
     # Rely on $PATH set by devstack to determine what is safe to execute
     # by rootwrap rather than use explicit whitelist of paths in
